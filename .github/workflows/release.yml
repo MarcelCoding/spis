@@ -4,6 +4,8 @@ name: Release
 on:
   release:
     types: [published]
+  push:
+    branches: [main, buttons]
 
 env:
   REGISTRY: ghcr.io
@@ -11,21 +13,14 @@ env:
   VERSION: ${{ github.ref_name }}
 
 jobs:
-  ci:
-    name: Run CI
-    uses: ./.github/workflows/ci.yml
-
   build-bins:
     name: Build binary ${{ matrix.target }}
     runs-on: ubuntu-latest
-    needs: ci
 
     strategy:
       matrix:
         target:
           - x86_64-unknown-linux-gnu
-          - armv7-unknown-linux-gnueabihf
-          - aarch64-unknown-linux-gnu
 
     steps:
       - name: Checkout
@@ -87,7 +82,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ github.token }}
 
       - name: Docker build and push
         uses: docker/build-push-action@v5
@@ -98,7 +93,7 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.VERSION }}
-          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -106,5 +101,5 @@ jobs:
         uses: AButler/upload-release-assets@v3.0
         with:
           files: 'release/*'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ env.token }}
           release-tag: ${{ env.VERSION }}

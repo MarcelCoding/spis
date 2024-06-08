@@ -5,7 +5,7 @@ run = ["mkdir -p data/media", "mkdir -p data/thumbnails"]
 outputs = ["data/media", "data/thumbnails"]
 
 [tasks."setup:db"]
-run = ["sqlx database create", "sqlx migrate run --source migrations"]
+run = ["sqlx database create --database-url sqlite://data/spis.db", "sqlx migrate run --source migrations --database-url sqlite://data/spis.db"]
 sources = ["migrations/*.sql"]
 outputs = ["data/spis.db"]
 depends = ["setup:folders"]

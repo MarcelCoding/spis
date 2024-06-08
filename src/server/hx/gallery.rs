@@ -69,7 +69,10 @@ pub(super) async fn render(pool: &Pool<Sqlite>, config: &Config, state: State) -
     // buttons.push(BarButton::Order(new_to_old));
 
     if state.year.is_none() {
-        for i in (current_year - 14..=current_year).rev() {
+        for i in db::media_get_years(pool, 14)
+            .await
+            .map_err(ServerError::DBError)?
+        {
             buttons.push(BarButton::Year(false, format!("{i}")));
         }
     } else if let Some(year) = state.year {

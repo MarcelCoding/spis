@@ -1,6 +1,7 @@
 use std::{collections::HashMap, fmt::Display};
 
 use crate::media::{ProcessedMedia, ProcessedMediaType};
+use chrono::Month;
 use chrono::{DateTime, Utc};
 use color_eyre::{eyre::Context, Result};
 use sqlx::{
@@ -312,4 +313,52 @@ WHERE RN IN (
         }
         _ => Err(color_eyre::eyre::eyre!("Media query returned bad result")),
     }
+}
+
+#[allow(clippy::future_not_send)]
+pub async fn media_get_years(pool: &SqlitePool, limit: u32) -> Result<Vec<u32>> {
+    let query = format!(
+        r"
+SELECT
+  STRFTIME('%Y', taken_at) AS year,
+FROM media
+ORDER BY
+  STRFTIME('%Y', taken_at) DESC,
+GROUP BY
+  STRFTIME('%Y', taken_at)
+LIMIT ?;
+"
+    );
+    let mut query = sqlx::query_as::<Sqlite, (u32,)>(&query);
+    let res = query
+        .bind(limit)
+        .fetch_all(pool)
+        .await
+        .wrap_err("Failed to fetch rows")?;
+
+    Ok(res.into_iter().map(|(year,)| year).collect())
+}
+#[allow(clippy::future_not_send)]
+pub async fn media_get_months(pool: &SqlitePool, year: u32) -> Result<Vec<Month>> {
+    let query = format!(
+        r"
+SELECT
+  STRFTIME('%m', taken_at) AS month,
+FROM media
+WHERE STRFTIME('%Y', taken_at) = ?
+GROUP BY
+  STRFTIME('%m', taken_at);
+"
+    );
+    let mut query = sqlx::query_as::<Sqlite, (u8,)>(&query);
+    let res = query
+        .bind(year)
+        .fetch_all(pool)
+        .await
+        .wrap_err("Failed to fetch rows")?;
+
+    Ok(res
+        .into_iter()
+        .map(|(month,)| Month::try_from(month).unwrap())
+        .collect())
 }
